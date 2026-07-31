@@ -36,8 +36,8 @@ return [
     ],
 
     /*
-    | Apple Sign In（原生 App Bundle ID 作为 client_id / aud）
-    | 例：top.yanzhenkun.workspace
+    | Apple Sign In（必须与 iOS Bundle ID / Apple Developer App ID 完全一致）
+    | 多个可用英文逗号分隔，例如：top.yanzehnkun.workspace,top.yanzhenkun.workspace
     */
     'apple' => [
         'client_id' => env('APPLE_CLIENT_ID', 'top.yanzehnkun.workspace'),

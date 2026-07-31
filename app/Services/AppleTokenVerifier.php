@@ -61,10 +61,7 @@ class AppleTokenVerifier
             ]);
         }
 
-        $clientIds = array_values(array_filter([
-            config('services.apple.client_id'),
-            config('services.apple.client_id_web'),
-        ]));
+        $clientIds = $this->allowedClientIds();
 
         if (($payload['iss'] ?? '') !== 'https://appleid.apple.com') {
             throw ValidationException::withMessages([
@@ -73,9 +70,15 @@ class AppleTokenVerifier
         }
 
         $aud = $payload['aud'] ?? null;
+        if (is_array($aud)) {
+            $aud = $aud[0] ?? null;
+        }
         if ($clientIds && ! in_array($aud, $clientIds, true)) {
             throw ValidationException::withMessages([
-                'identity_token' => ['Apple 受众与 Bundle ID 不匹配'],
+                'identity_token' => [
+                    'Apple 受众与 Bundle ID 不匹配（token.aud='.($aud ?: '空')
+                    .'，服务端期望='.implode(',', $clientIds).'）。请把 APPLE_CLIENT_ID 改成与 iOS Bundle ID 完全一致后 php artisan config:clear',
+                ],
             ]);
         }
 
@@ -92,6 +95,26 @@ class AppleTokenVerifier
         }
 
         return $payload;
+    }
+
+    /** @return list<string> */
+    private function allowedClientIds(): array
+    {
+        $raw = array_filter([
+            config('services.apple.client_id'),
+            config('services.apple.client_id_web'),
+        ]);
+
+        $ids = [];
+        foreach ($raw as $item) {
+            foreach (preg_split('/\s*,\s*/', (string) $item) ?: [] as $id) {
+                if ($id !== '') {
+                    $ids[] = $id;
+                }
+            }
+        }
+
+        return array_values(array_unique($ids));
     }
 
     private function findAppleKey(string $kid): ?array
