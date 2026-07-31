@@ -44,4 +44,18 @@ return [
         'client_id_web' => env('APPLE_CLIENT_ID_WEB'),
     ],
 
+    /*
+    | UniPush 提醒推送
+    | driver=getui：个推 RestAPI（开发者中心 → uni-push → 应用配置 取密钥）
+    | driver=unicloud：云函数 URL 化地址（UniPush 2.0 官方路径）
+    */
+    'unipush' => [
+        'driver' => env('UNIPUSH_DRIVER', 'getui'),
+        'app_id' => env('UNIPUSH_APP_ID'),
+        'app_key' => env('UNIPUSH_APP_KEY'),
+        'master_secret' => env('UNIPUSH_MASTER_SECRET'),
+        'cloud_url' => env('UNIPUSH_CLOUD_URL'),
+        'cloud_secret' => env('UNIPUSH_CLOUD_SECRET'),
+    ],
+
 ];

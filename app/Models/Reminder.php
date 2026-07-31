@@ -24,6 +24,8 @@ class Reminder extends Model
         'related_type',
         'related_key',
         'status',
+        'pushed_at',
+        'push_attempts',
         'created_by',
         'deleted_by',
     ];
@@ -32,6 +34,7 @@ class Reminder extends Model
     {
         return [
             'due_at' => 'datetime',
+            'pushed_at' => 'datetime',
             'recurrence' => 'array',
         ];
     }

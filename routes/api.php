@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AlbumController;
 use App\Http\Controllers\Api\AttachmentController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\CatalogController;
 use App\Http\Controllers\Api\ChecklistController;
 use App\Http\Controllers\Api\HomeController;
@@ -27,6 +28,8 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('me', [AuthController::class, 'me']);
         Route::post('auth/logout', [AuthController::class, 'logout']);
+        Route::post('device-tokens', [DeviceTokenController::class, 'store']);
+        Route::delete('device-tokens', [DeviceTokenController::class, 'destroy']);
 
         Route::get('workspaces', [WorkspaceController::class, 'index']);
         Route::post('workspaces', [WorkspaceController::class, 'store']);

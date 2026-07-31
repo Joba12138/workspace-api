@@ -67,6 +67,23 @@ php artisan route:cache
 php artisan route:list --path=api
 ```
 
+## 提醒推送（UniPush）
+
+1. 在 `.env` 配置推送密钥（见 `.env.example` 的 `UNIPUSH_*`）
+2. 部署后确保 cron 跑调度：
+
+```bash
+* * * * * cd /path/to/workspace-api && php artisan schedule:run >> /dev/null 2>&1
+```
+
+3. 手动试推：
+
+```bash
+php artisan reminders:dispatch
+```
+
+客户端需用**含 Push 的自定义基座/正式包**登录一次，才会上报 `push_client_id`。
+
 ## Nginx 要点
 
 - 网站根目录：`.../workspace-api/public`
