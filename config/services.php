@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    /*
+    | Apple Sign In（原生 App Bundle ID 作为 client_id / aud）
+    | 例：top.yanzhenkun.workspace
+    */
+    'apple' => [
+        'client_id' => env('APPLE_CLIENT_ID', 'top.yanzehnkun.workspace'),
+        'client_id_web' => env('APPLE_CLIENT_ID_WEB'),
+    ],
+
 ];

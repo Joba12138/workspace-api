@@ -18,6 +18,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'apple_id',
     ];
 
     protected $hidden = [
