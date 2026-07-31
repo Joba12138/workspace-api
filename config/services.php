@@ -58,4 +58,23 @@ return [
         'cloud_secret' => env('UNIPUSH_CLOUD_SECRET'),
     ],
 
+    /*
+    | 企业微信群机器人 Webhook（全局异常告警）
+    */
+    'wecom' => [
+        'enabled' => (bool) env('WECOM_WEBHOOK_ENABLED', true),
+        'webhook_url' => env('WECOM_WEBHOOK_URL'),
+        'throttle_seconds' => (int) env('WECOM_WEBHOOK_THROTTLE', 60),
+        'dont_report' => [
+            \Illuminate\Validation\ValidationException::class,
+            \Illuminate\Auth\AuthenticationException::class,
+            \Illuminate\Auth\Access\AuthorizationException::class,
+            \Illuminate\Database\Eloquent\ModelNotFoundException::class,
+            \Symfony\Component\HttpKernel\Exception\NotFoundHttpException::class,
+            \Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException::class,
+            \Illuminate\Http\Exceptions\ThrottleRequestsException::class,
+            \Illuminate\Session\TokenMismatchException::class,
+        ],
+    ],
+
 ];
