@@ -64,7 +64,10 @@ return [
     'wecom' => [
         'enabled' => (bool) env('WECOM_WEBHOOK_ENABLED', true),
         'webhook_url' => env('WECOM_WEBHOOK_URL'),
-        'throttle_seconds' => (int) env('WECOM_WEBHOOK_THROTTLE', 60),
+        // 同一异常类+文案：默认 5 分钟内只报 1 次
+        'throttle_seconds' => (int) env('WECOM_WEBHOOK_THROTTLE', 300),
+        // 任意异常：默认 60 秒内全局最多 1 条（防止一页 15 个接口同时炸）
+        'global_throttle_seconds' => (int) env('WECOM_WEBHOOK_GLOBAL_THROTTLE', 60),
         'dont_report' => [
             \Illuminate\Validation\ValidationException::class,
             \Illuminate\Auth\AuthenticationException::class,

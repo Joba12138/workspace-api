@@ -123,7 +123,8 @@ class AuthController extends Controller
         $claims = $this->appleTokens->verify($data['identity_token']);
         $appleId = (string) $claims['sub'];
         $emailFromToken = is_string($claims['email'] ?? null) ? $claims['email'] : null;
-        $email = $data['email'] ?: $emailFromToken;
+        // Apple 仅首次授权可能给 email；后续请求/校验结果里常无此键
+        $email = ($data['email'] ?? null) ?: $emailFromToken;
 
         $displayName = $this->resolveAppleDisplayName($data, $email);
 

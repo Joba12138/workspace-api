@@ -8,7 +8,8 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * 企业微信群机器人 Webhook 告警（无需 easywechat）。
+ * 企业微信群机器人 Webhook 告警。
+ * 强节流：全局限流 + 同类去重，避免一页多接口同时 500 刷屏。
  */
 class WeComWebhookNotifier
 {
@@ -24,13 +25,39 @@ class WeComWebhookNotifier
             return;
         }
 
-        $fingerprint = md5($e::class.'|'.$e->getMessage().'|'.$e->getFile().'|'.$e->getLine());
-        $throttleSeconds = (int) config('services.wecom.throttle_seconds', 60);
-        if ($throttleSeconds > 0 && ! Cache::add('wecom:ex:'.$fingerprint, 1, $throttleSeconds)) {
-            return;
+        // 只按「异常类 + 信息」去重（不含 file/line，避免同类问题刷多条）
+        $fingerprint = md5($e::class.'|'.mb_substr($e->getMessage(), 0, 300));
+        $perErrorSeconds = max(1, (int) config('services.wecom.throttle_seconds', 300));
+        $globalSeconds = max(1, (int) config('services.wecom.global_throttle_seconds', 60));
+
+        try {
+            if (! Cache::add('wecom:ex:'.$fingerprint, 1, $perErrorSeconds)) {
+                Cache::increment('wecom:suppressed');
+
+                return;
+            }
+
+            // 全局闸门：任意异常 60s 内最多推 1 条
+            if (! Cache::add('wecom:global_gate', 1, $globalSeconds)) {
+                Cache::increment('wecom:suppressed');
+
+                return;
+            }
+        } catch (Throwable $cacheError) {
+            // 缓存不可用时也绝不裸奔刷屏：退回文件锁
+            if (! $this->acquireFileLock($fingerprint, $perErrorSeconds)) {
+                return;
+            }
         }
 
-        $this->sendMarkdown($this->formatException($e));
+        $suppressed = 0;
+        try {
+            $suppressed = (int) Cache::pull('wecom:suppressed', 0);
+        } catch (Throwable) {
+            //
+        }
+
+        $this->sendMarkdown($this->formatException($e, $suppressed));
     }
 
     public function sendText(string $content): bool
@@ -68,7 +95,7 @@ class WeComWebhookNotifier
         return true;
     }
 
-    private function formatException(Throwable $e): string
+    private function formatException(Throwable $e, int $suppressed = 0): string
     {
         $app = config('app.name', 'workspace-api');
         $env = config('app.env');
@@ -80,10 +107,10 @@ class WeComWebhookNotifier
         $line = $e->getLine();
         $message = str_replace(["\n", '`'], [' ', "'"], mb_substr($e->getMessage(), 0, 500));
         $trace = collect(explode("\n", $e->getTraceAsString()))
-            ->take(8)
+            ->take(6)
             ->implode("\n");
 
-        return implode("\n", [
+        $lines = [
             "**[{$app}] 服务端异常**",
             ">环境: <font color=\"warning\">{$env}</font>",
             '>时间: '.now()->toDateTimeString(),
@@ -92,8 +119,30 @@ class WeComWebhookNotifier
             ">类型: `{$class}`",
             ">信息: <font color=\"comment\">{$message}</font>",
             ">位置: `{$file}:{$line}`",
-            "```\n{$trace}\n```",
-        ]);
+        ];
+
+        if ($suppressed > 0) {
+            $lines[] = ">节流: 期间已抑制 <font color=\"warning\">{$suppressed}</font> 条同类/并发告警";
+        }
+
+        $lines[] = "```\n{$trace}\n```";
+
+        return implode("\n", $lines);
+    }
+
+    private function acquireFileLock(string $fingerprint, int $seconds): bool
+    {
+        $dir = storage_path('framework/wecom-throttle');
+        if (! is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        $path = $dir.'/'.$fingerprint.'.lock';
+        if (is_file($path) && (time() - (int) @filemtime($path)) < $seconds) {
+            return false;
+        }
+        @file_put_contents($path, (string) time());
+
+        return true;
     }
 
     private function post(array $payload): bool
