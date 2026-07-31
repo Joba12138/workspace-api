@@ -80,6 +80,9 @@ APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://你的api域名
 
+# 当前线上示例：
+# APP_URL=https://workspace-api.yanzhenkun.top
+
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
