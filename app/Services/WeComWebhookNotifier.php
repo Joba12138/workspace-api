@@ -60,6 +60,77 @@ class WeComWebhookNotifier
         $this->sendMarkdown($this->formatException($e, $suppressed));
     }
 
+    /**
+     * 业务/上游告警（非 5xx），如 LLM 额度用尽。带同类节流。
+     *
+     * @param  array<string, scalar|null>  $context
+     */
+    public function reportAlert(string $title, string $detail, array $context = []): void
+    {
+        if (! $this->enabled()) {
+            return;
+        }
+
+        $fingerprint = md5('alert|'.$title.'|'.mb_substr($detail, 0, 300));
+        $perErrorSeconds = max(1, (int) config('services.wecom.throttle_seconds', 300));
+        $globalSeconds = max(1, (int) config('services.wecom.global_throttle_seconds', 60));
+
+        try {
+            if (! Cache::add('wecom:alert:'.$fingerprint, 1, $perErrorSeconds)) {
+                Cache::increment('wecom:suppressed');
+
+                return;
+            }
+            if (! Cache::add('wecom:global_gate', 1, $globalSeconds)) {
+                Cache::increment('wecom:suppressed');
+
+                return;
+            }
+        } catch (Throwable) {
+            if (! $this->acquireFileLock('a:'.$fingerprint, $perErrorSeconds)) {
+                return;
+            }
+        }
+
+        $suppressed = 0;
+        try {
+            $suppressed = (int) Cache::pull('wecom:suppressed', 0);
+        } catch (Throwable) {
+            //
+        }
+
+        $app = config('app.name', 'workspace-api');
+        $env = config('app.env');
+        $method = request()?->method() ?: '-';
+        $url = request()?->fullUrl() ?: (PHP_SAPI === 'cli' ? 'cli' : '-');
+        $userId = auth()->id() ?: '-';
+        $safeDetail = str_replace(["\n", '`'], [' ', "'"], mb_substr($detail, 0, 500));
+
+        $lines = [
+            "**[{$app}] {$title}**",
+            ">环境: <font color=\"warning\">{$env}</font>",
+            '>时间: '.now()->toDateTimeString(),
+            ">请求: `{$method} {$url}`",
+            ">用户: {$userId}",
+            ">说明: <font color=\"comment\">{$safeDetail}</font>",
+        ];
+
+        foreach ($context as $key => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+            $k = str_replace(["\n", '`'], [' ', "'"], (string) $key);
+            $v = str_replace(["\n", '`'], [' ', "'"], mb_substr((string) $value, 0, 200));
+            $lines[] = ">{$k}: `{$v}`";
+        }
+
+        if ($suppressed > 0) {
+            $lines[] = ">节流: 期间已抑制 <font color=\"warning\">{$suppressed}</font> 条同类/并发告警";
+        }
+
+        $this->sendMarkdown(implode("\n", $lines));
+    }
+
     public function sendText(string $content): bool
     {
         return $this->post([
