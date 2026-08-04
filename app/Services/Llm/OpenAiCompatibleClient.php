@@ -16,10 +16,10 @@ class OpenAiCompatibleClient implements LlmClient
         $timeout = (int) config('services.llm.timeout', 60);
 
         if ($base === '' || $apiKey === '') {
-            throw new RuntimeException('LLM 未配置：请设置 LLM_BASE_URL 与 LLM_API_KEY');
+            throw new RuntimeException('AI 服务尚未配置完成');
         }
         if ($model === '') {
-            throw new RuntimeException('LLM 未配置：请设置 LLM_MODEL');
+            throw new RuntimeException('AI 服务尚未配置完成');
         }
 
         $body = [
@@ -43,16 +43,29 @@ class OpenAiCompatibleClient implements LlmClient
             ->post($base.'/chat/completions', $body);
 
         if (! $res->successful()) {
-            throw new RuntimeException(
-                'LLM 调用失败: HTTP '.$res->status().' '.mb_substr($res->body(), 0, 300)
-            );
+            $status = $res->status();
+            $body = (string) $res->body();
+            report(new RuntimeException('LLM HTTP '.$status.': '.mb_substr($body, 0, 500)));
+
+            if ($status === 401 || $status === 403) {
+                if (str_contains($body, 'quota') || str_contains($body, 'FreeTier') || str_contains($body, 'exhausted')) {
+                    throw new RuntimeException('AI 额度暂时用完了，请稍后再试');
+                }
+
+                throw new RuntimeException('AI 服务暂时不可用，请稍后再试');
+            }
+            if ($status === 429) {
+                throw new RuntimeException('请求有点频繁，请稍后再试');
+            }
+
+            throw new RuntimeException('AI 暂时开小差了，请稍后再试');
         }
 
         $json = $res->json() ?: [];
         $content = (string) data_get($json, 'choices.0.message.content', '');
 
         if ($content === '') {
-            throw new RuntimeException('LLM 返回空内容');
+            throw new RuntimeException('AI 没给出有效回复，请再说一遍');
         }
 
         return new LlmResult(

@@ -17,7 +17,7 @@ class AiSpeechTranscriber
         $apiKey = (string) config('services.asr.api_key');
         $base = rtrim((string) config('services.asr.base_url'), '/');
         $model = (string) config('services.asr.model', 'fun-asr-flash');
-        $timeout = (int) config('services.asr.timeout', 60);
+        $timeout = (int) config('services.asr.timeout', 20);
 
         if ($apiKey === '' || $base === '') {
             throw new RuntimeException('语音转写未配置：请设置 ASR_API_KEY 或 LLM_API_KEY');
@@ -25,7 +25,11 @@ class AiSpeechTranscriber
 
         $bytes = file_get_contents($file->getRealPath());
         if ($bytes === false || $bytes === '') {
-            throw new RuntimeException('音频文件为空');
+            throw new RuntimeException('未识别到语音内容');
+        }
+        // 过小的文件基本是空录音
+        if (strlen($bytes) < 800) {
+            throw new RuntimeException('未识别到语音内容');
         }
         if (strlen($bytes) > 10 * 1024 * 1024) {
             throw new RuntimeException('音频过长，请控制在 5 分钟 / 10MB 内');
