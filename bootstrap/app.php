@@ -21,6 +21,14 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+        // API 无 web login 路由；未登录返回 401，禁止跳转 route('login')
+        $middleware->redirectGuestsTo(function (Request $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return null;
+            }
+
+            return '/';
+        });
     })
     ->withSchedule(function (Schedule $schedule): void {
         $schedule->command('reminders:dispatch')->everyMinute()->withoutOverlapping();
@@ -32,6 +40,14 @@ return Application::configure(basePath: dirname(__DIR__))
             } catch (\Throwable) {
                 // 告警失败不影响主流程
             }
+        });
+
+        $exceptions->render(function (AuthenticationException $e, Request $request) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json(['message' => '未登录'], 401);
+            }
+
+            return null;
         });
 
         $exceptions->render(function (\Throwable $e, Request $request) {
