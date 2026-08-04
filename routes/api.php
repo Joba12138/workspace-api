@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AiIntakeController;
 use App\Http\Controllers\Api\AlbumController;
 use App\Http\Controllers\Api\AttachmentController;
 use App\Http\Controllers\Api\AuthController;
@@ -111,6 +112,9 @@ Route::prefix('v1')->group(function () {
             Route::patch('reminders/{id}', [ReminderController::class, 'update']);
             Route::delete('reminders/{id}', [ReminderController::class, 'destroy']);
             Route::post('reminders/{id}/restore', [ReminderController::class, 'restore']);
+
+            Route::post('ai/intake/parse', [AiIntakeController::class, 'parse']);
+            Route::post('ai/speech/transcribe', [AiIntakeController::class, 'transcribe']);
         });
     });
 });

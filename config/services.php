@@ -59,6 +59,28 @@ return [
     ],
 
     /*
+    | LLM（OpenAI 兼容；换模型只改 base_url / api_key / model）
+    */
+    'llm' => [
+        'driver' => env('LLM_DRIVER', 'openai_compatible'),
+        'base_url' => env('LLM_BASE_URL', 'https://dashscope.aliyuncs.com/compatible-mode/v1'),
+        'api_key' => env('LLM_API_KEY', env('DASHSCOPE_API_KEY')),
+        'model' => env('LLM_MODEL', 'qwen-plus'),
+        'timeout' => (int) env('LLM_TIMEOUT', 60),
+    ],
+
+    /*
+    | 语音转写（短音频同步；默认 Fun-ASR-Flash / multimodal-generation）
+    */
+    'asr' => [
+        'enabled' => (bool) env('ASR_ENABLED', true),
+        'base_url' => env('ASR_BASE_URL', 'https://dashscope.aliyuncs.com/api/v1'),
+        'api_key' => env('ASR_API_KEY', env('LLM_API_KEY', env('DASHSCOPE_API_KEY'))),
+        'model' => env('ASR_MODEL', 'fun-asr-flash'),
+        'timeout' => (int) env('ASR_TIMEOUT', 60),
+    ],
+
+    /*
     | 企业微信群机器人 Webhook（全局异常告警）
     */
     'wecom' => [

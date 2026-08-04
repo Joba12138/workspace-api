@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Contracts\LlmClient;
+use App\Services\Llm\LlmManager;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,7 +13,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(LlmManager::class);
+        $this->app->bind(LlmClient::class, fn ($app) => $app->make(LlmManager::class)->driver());
     }
 
     /**
